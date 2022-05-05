@@ -3,5 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "xihaoshangdi <xihaoshangdi@163.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "jest reactiveEffect.test"
+  },
+  "devDependencies": {
+    "jest": "^28.0.3",
+    "@babel/core": "^7.17.10",
+    "@babel/preset-env": "^7.17.10",
+    "babel-jest": "^28.0.3"
+  }
 }

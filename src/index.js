@@ -1,20 +1,12 @@
 import { reactive, ref } from "./lib/reactive.js";
 import { observer } from "./lib/reactiveEffect.js";
-let $xxx = reactive({ value: 1, aaa: 0 });
-let $yyy = reactive({ value: 4 });
 
-
-observer(function () {
-  $xxx.value = $yyy.value;
-  console.log("xxx 的 setter yyy 的 getter", $xxx.value);
-});
-// observer(function () {
-//   $yyy.value=$xxx.value;
-//   console.log("yyy 的 setter xxx 的 getter", $xxx.value);
-// });
-
-
+let dummy
+const obj = reactive({ prop: 'value' })
+observer(() => (dummy = 'prop' in obj))
 console.log("---------------START-----------------");
-$yyy.value++;
-$yyy.value++;
-$yyy.value++;
+console.log(dummy);
+delete obj.prop
+console.log(dummy);
+obj.prop = 12
+console.log(dummy);

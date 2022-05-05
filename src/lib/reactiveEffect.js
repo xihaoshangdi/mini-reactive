@@ -38,21 +38,21 @@ function track(target, property){
     const dep = getDep(target, property);
     // 收集副作用
     // console.log(target);
-    trackEffects(dep)  
+    trackEffects(dep,target)  
   }
 }
 
-function trackEffects(dep){
+function trackEffects(dep,target){
   let shouldTrack = true;
   // 这里考虑的情况是一次副作用函数运行中多次触发GET劫持，触发track 获取dep 但是不再重复收集
   shouldTrack =!dep.has(currentEffect)
   // 依赖收集
   if(shouldTrack){
+    console.log(target,currentEffect);
     // 收集依赖
     dep.add(currentEffect)
     // 
     currentEffect.deps.push(dep)
-    console.log(dep);
   }
 }
 
