@@ -57,6 +57,7 @@ function trackEffects(dep,target){
 }
 
 function trigger(target, property){
+  console.log(target, property);
   const dep = getDep(target, property);
   // console.log('dep',dep);
   dep.forEach((item) => item.run());

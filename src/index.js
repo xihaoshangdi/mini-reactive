@@ -1,12 +1,12 @@
 import { reactive, ref } from "./lib/reactive.js";
 import { observer } from "./lib/reactiveEffect.js";
 
-let dummy
-const obj = reactive({ prop: 'value' })
-observer(() => (dummy = 'prop' in obj))
+let dummy;
+const list = reactive(["Hello"]);
+observer(() => (dummy = list.join(" ")));
 console.log("---------------START-----------------");
 console.log(dummy);
-delete obj.prop
+list[1] = "World!";
 console.log(dummy);
-obj.prop = 12
+list[3] = "Hello!";
 console.log(dummy);

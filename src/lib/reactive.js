@@ -1,4 +1,4 @@
-import { baseHandler } from "./baseHander";
+import { baseHandler } from "./baseHandler";
 
 const rawToProxyMap = new WeakMap();
 

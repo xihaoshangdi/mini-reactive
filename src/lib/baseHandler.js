@@ -1,6 +1,6 @@
 import { track, trigger } from "./reactiveEffect.js";
 import { reactive, ref } from "./reactive.js";
-import { isObject } from "./util.js";
+import { isObject, isArray } from "./util.js";
 const baseHandler = {
   get: function (target, property, receiver) {
     const result = Reflect.get(target, property, receiver);
@@ -22,9 +22,15 @@ const baseHandler = {
   },
   set: function (target, property, value, receiver) {
     const result = Reflect.set(target, property, value, receiver);
-    // console.log("set trigger", target, property, value);
-    // 依赖触发
-    trigger(target, property);
+    console.log("set trigger", target, property, value);
+    // 关于数组的额外处理
+    if (isArray(target)) {
+      trigger(target, "length");
+    } else {
+      // 依赖触发
+      trigger(target, property);
+    }
+
     return result;
   },
   deleteProperty: function (target, property) {
