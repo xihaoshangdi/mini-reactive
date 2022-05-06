@@ -11,8 +11,16 @@ const getDep = function (target, property) {
   return depsMap.get(property);
 };
 
+const getDepMap = function (target) {
+  if (!targetMap.has(target)) {
+    targetMap.set(target, new Map());
+  }
+  return targetMap.get(target);
+};
+
+
 const createDep = () => {
   return new Set();
 };
 
-export { getDep };
+export { getDep,getDepMap };
