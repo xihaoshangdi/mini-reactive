@@ -171,4 +171,50 @@ describe("副作用相关的测试用例", () => {
     list.pop()
     expect(dummy).toBe('Hello')
   })
+  // should observe enumeration
+  it('计算操作应触发副作用', () => {
+    let dummy = 0
+    const numbers = reactive({ num1: 3 })
+    observer(() => {
+      dummy = 0
+      for (let key in numbers) {
+        dummy += numbers[key]
+      }
+    })
+  
+    expect(dummy).toBe(3)
+    numbers.num2 = 4
+    expect(dummy).toBe(7)
+    delete numbers.num1
+    expect(dummy).toBe(4)
+  })
+  // should observe symbol keyed properties
+  it('Symbol 类型应触发副作用', () => {
+    const key = Symbol('symbol keyed prop')
+    let dummy, hasDummy
+    const obj = reactive({ [key]: 'value' })
+    observer(() => (dummy = obj[key]))
+    observer(() => (hasDummy = key in obj))
+  
+    expect(dummy).toBe('value')
+    expect(hasDummy).toBe(true)
+    obj[key] = 'newValue'
+    expect(dummy).toBe('newValue')
+    delete obj[key]
+    expect(dummy).toBe(undefined)
+    expect(hasDummy).toBe(false)
+  })
+  // should not observe well-known symbol keyed properties
+  it('well-known symbol 不应被观察', () => {
+    const key = Symbol.isConcatSpreadable
+    let dummy
+    const array= reactive([])
+    observer(() => (dummy = array[key]))
+  
+    expect(array[key]).toBe(undefined)
+    expect(dummy).toBe(undefined)
+    array[key] = true
+    expect(array[key]).toBe(true)
+    expect(dummy).toBe(undefined)
+  })
 });

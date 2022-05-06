@@ -1,10 +1,32 @@
 import { track, trigger } from "./reactiveEffect.js";
 import { reactive, ref } from "./reactive.js";
-import { isObject, isArray, hasOwn, hasChanged, isIntegerKey } from "./util.js";
+import {
+  isObject,
+  isArray,
+  hasOwn,
+  hasChanged,
+  isIntegerKey,
+  isSymbol,
+} from "./util.js";
+
+export const ITERATE_KEY = Symbol("iterate");
+export const HAS_KEY = Symbol("has");
+// well-known symbol 不应被观察的数据
+const builtInSymbols = new Set(
+  Object.getOwnPropertyNames(Symbol)
+    .map((key) => Symbol[key])
+    .filter(isSymbol)
+);
+
 const baseHandler = {
   get: function (target, property, receiver) {
     const result = Reflect.get(target, property, receiver);
     // console.log("get trigger", target, property);
+
+    // 处理 well-known symbol
+    if (isSymbol(property) && builtInSymbols.has(property)) {
+      return result;
+    }
     // 依赖收集
     track(target, property);
     // 代理嵌套子节点
@@ -18,6 +40,13 @@ const baseHandler = {
     // console.log("has trigger", target, property);
     // 依赖收集
     track(target, property);
+    return result;
+  },
+  ownKeys: function (target) {
+    const result = Reflect.ownKeys(target);
+    // console.log("ownKeys trigger", target);
+    // 依赖收集 这里声明一种新的类型用于依赖收集迭代器相关的副作用
+    track(target, isArray(target) ? "length" : ITERATE_KEY, "ITERATE");
     return result;
   },
   set: function (target, property, value, receiver) {

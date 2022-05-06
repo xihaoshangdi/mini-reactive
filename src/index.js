@@ -4,15 +4,14 @@ import { observer } from "./lib/reactiveEffect.js";
 
 
 
+const key = Symbol.isConcatSpreadable
+let dummy
+const array= reactive([])
+observer(() => (dummy = array[key]))
 
-let dummy;
-const list = reactive(["Hello"]);
-observer(() => (dummy = list.join(" ")));
-console.log("---------------START-----------------");
-console.log(dummy);
-list[1] = "World!";
-console.log(dummy);
-list[3] = "Hello!";
-console.log(dummy);
-list.splice(3,1,0)
-console.log(dummy);
+// expect(array[key]).toBe(undefined)
+// expect(dummy).toBe(undefined)
+debugger
+array[key] = true
+// expect(array[key]).toBe(true)
+// expect(dummy).toBe(undefined)

@@ -1,4 +1,5 @@
 import { getDep, getDepMap } from "./dep.js";
+import { ITERATE_KEY } from "./baseHandler";
 import { isObject, isArray, hasOwn, hasChanged, isIntegerKey } from "./util.js";
 
 //
@@ -34,12 +35,12 @@ class ReactiveEffect {
   }
 }
 
-function track(target, property) {
+function track(target, property, type) {
   if (currentEffect) {
     const dep = getDep(target, property);
     // 收集副作用
     // console.log(target);
-    trackEffects(dep, target);
+    trackEffects(dep, target, type);
   }
 }
 
@@ -60,13 +61,18 @@ function trackEffects(dep, target) {
 function trigger(target, property, type) {
   // console.log("trigger", target, property, type);
   let deps = [];
+
   switch (type) {
     case "ADD":
-      // 数组新增属性,强制触发length
+      // ADD 触发的情况：
+      // 1.对象新增的属性已经存在副作用(触发对应的副作用)
+      // 2.数组的越界新增(触发length副作用 )
+      // 3.对象的属性新增(触发ITERATE_KEY副作用 )
+      deps.push(...getDep(target, property));
       if (isArray(target) && isIntegerKey(property)) {
         deps.push(...getDep(target, "length"));
       } else {
-        deps.push(...getDep(target, property));
+        deps.push(...getDep(target, ITERATE_KEY));
       }
       break;
     case "SET":

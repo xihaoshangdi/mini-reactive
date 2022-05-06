@@ -3,6 +3,7 @@ export const isObject = (val) => {
 };
 export const isString = (val) => typeof val === "string";
 export const isArray = Array.isArray;
+export const isSymbol = (val) => typeof val === "symbol";
 
 export const isIntegerKey = (key) =>
   isString(key) &&
