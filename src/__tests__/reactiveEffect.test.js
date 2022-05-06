@@ -1,9 +1,4 @@
-import {
-  observer,
-  track,
-  trigger,
-  currentEffect,
-} from "../lib/reactiveEffect.js";
+import { observer } from "../lib/reactiveEffect.js";
 import { reactive, ref } from "../lib/reactive.js";
 
 describe("副作用相关的测试用例", () => {
@@ -95,126 +90,187 @@ describe("副作用相关的测试用例", () => {
     expect(dummy).toBe(3);
   });
   // should observe inherited property accessors
-  it('应该遵守继承的属性访问器', () => {
-    let dummy, parentDummy, hiddenValue
-    const obj = reactive({})
+  it("应该遵守继承的属性访问器", () => {
+    let dummy, parentDummy, hiddenValue;
+    const obj = reactive({});
     const parent = reactive({
       set prop(value) {
-        hiddenValue = value
+        hiddenValue = value;
       },
       get prop() {
-        return hiddenValue
-      }
-    })
-    Object.setPrototypeOf(obj, parent)
-    observer(() => (dummy = obj.prop))
-    observer(() => (parentDummy = parent.prop))
-  
-    expect(dummy).toBe(undefined)
-    expect(parentDummy).toBe(undefined)
-    obj.prop = 4
-    expect(dummy).toBe(4)
+        return hiddenValue;
+      },
+    });
+    Object.setPrototypeOf(obj, parent);
+    observer(() => (dummy = obj.prop));
+    observer(() => (parentDummy = parent.prop));
+
+    expect(dummy).toBe(undefined);
+    expect(parentDummy).toBe(undefined);
+    obj.prop = 4;
+    expect(dummy).toBe(4);
     // this doesn't work, should it?
     // expect(parentDummy).toBe(4)
-    parent.prop = 2
-    expect(dummy).toBe(2)
-    expect(parentDummy).toBe(2)
-  })
+    parent.prop = 2;
+    expect(dummy).toBe(2);
+    expect(parentDummy).toBe(2);
+  });
   // should observe function call chains
-  it('函数调用产生的副作用也可以收集', () => {
-    let dummy
-    const counter = reactive({ num: 0 })
-    observer(() => (dummy = getNum()))
-  
+  it("函数调用产生的副作用也可以收集", () => {
+    let dummy;
+    const counter = reactive({ num: 0 });
+    observer(() => (dummy = getNum()));
+
     function getNum() {
-      return counter.num
+      return counter.num;
     }
-  
-    expect(dummy).toBe(0)
-    counter.num = 2
-    expect(dummy).toBe(2)
-  })
+
+    expect(dummy).toBe(0);
+    counter.num = 2;
+    expect(dummy).toBe(2);
+  });
   // should observe iteration
-  it('数组的变动也会触发副作用', () => {
-    let dummy
-    const list = reactive(['Hello'])
-    observer(() => (dummy = list.join(' ')))
-  
-    expect(dummy).toBe('Hello')
-    list.push('World!')
-    expect(dummy).toBe('Hello World!')
-    list.shift()
-    expect(dummy).toBe('World!')
-  })
+  it("数组的变动也会触发副作用", () => {
+    let dummy;
+    const list = reactive(["Hello"]);
+    observer(() => (dummy = list.join(" ")));
+
+    expect(dummy).toBe("Hello");
+    list.push("World!");
+    expect(dummy).toBe("Hello World!");
+    list.shift();
+    expect(dummy).toBe("World!");
+  });
   // should observe implicit array length changes
-  it('数组下标改变应触发副作用', () => {
-    let dummy
-    const list = reactive(['Hello'])
-    observer(() => (dummy = list.join(' ')))
-  
-    expect(dummy).toBe('Hello')
-    list[1] = 'World!'
-    expect(dummy).toBe('Hello World!')
-    list[3] = 'Hello!'
-    expect(dummy).toBe('Hello World!  Hello!')
-  })
+  it("数组下标改变应触发副作用", () => {
+    let dummy;
+    const list = reactive(["Hello"]);
+    observer(() => (dummy = list.join(" ")));
+
+    expect(dummy).toBe("Hello");
+    list[1] = "World!";
+    expect(dummy).toBe("Hello World!");
+    list[3] = "Hello!";
+    expect(dummy).toBe("Hello World!  Hello!");
+  });
   // should observe sparse array mutations
-  it('数组长度内容改变应触发副作用', () => {
-    let dummy
-    const list = reactive([])
-    list[1] = 'World!'
-    observer(() => (dummy = list.join(' ')))
-  
-    expect(dummy).toBe(' World!')
-    list[0] = 'Hello'
-    expect(dummy).toBe('Hello World!')
-    list.pop()
-    expect(dummy).toBe('Hello')
-  })
+  it("数组长度内容改变应触发副作用", () => {
+    let dummy;
+    const list = reactive([]);
+    list[1] = "World!";
+    observer(() => (dummy = list.join(" ")));
+
+    expect(dummy).toBe(" World!");
+    list[0] = "Hello";
+    expect(dummy).toBe("Hello World!");
+    list.pop();
+    expect(dummy).toBe("Hello");
+  });
   // should observe enumeration
-  it('计算操作应触发副作用', () => {
-    let dummy = 0
-    const numbers = reactive({ num1: 3 })
+  it("计算操作应触发副作用", () => {
+    let dummy = 0;
+    const numbers = reactive({ num1: 3 });
     observer(() => {
-      dummy = 0
+      dummy = 0;
       for (let key in numbers) {
-        dummy += numbers[key]
+        dummy += numbers[key];
       }
-    })
-  
-    expect(dummy).toBe(3)
-    numbers.num2 = 4
-    expect(dummy).toBe(7)
-    delete numbers.num1
-    expect(dummy).toBe(4)
-  })
+    });
+
+    expect(dummy).toBe(3);
+    numbers.num2 = 4;
+    expect(dummy).toBe(7);
+    delete numbers.num1;
+    expect(dummy).toBe(4);
+  });
   // should observe symbol keyed properties
-  it('Symbol 类型应触发副作用', () => {
-    const key = Symbol('symbol keyed prop')
-    let dummy, hasDummy
-    const obj = reactive({ [key]: 'value' })
-    observer(() => (dummy = obj[key]))
-    observer(() => (hasDummy = key in obj))
-  
-    expect(dummy).toBe('value')
-    expect(hasDummy).toBe(true)
-    obj[key] = 'newValue'
-    expect(dummy).toBe('newValue')
-    delete obj[key]
-    expect(dummy).toBe(undefined)
-    expect(hasDummy).toBe(false)
-  })
+  it("Symbol 类型应触发副作用", () => {
+    const key = Symbol("symbol keyed prop");
+    let dummy, hasDummy;
+    const obj = reactive({ [key]: "value" });
+    observer(() => (dummy = obj[key]));
+    observer(() => (hasDummy = key in obj));
+
+    expect(dummy).toBe("value");
+    expect(hasDummy).toBe(true);
+    obj[key] = "newValue";
+    expect(dummy).toBe("newValue");
+    delete obj[key];
+    expect(dummy).toBe(undefined);
+    expect(hasDummy).toBe(false);
+  });
   // should not observe well-known symbol keyed properties
-  it('well-known symbol 不应被观察', () => {
-    const key = Symbol.isConcatSpreadable
-    let dummy
-    const array= reactive([])
-    observer(() => (dummy = array[key]))
-  
-    expect(array[key]).toBe(undefined)
-    expect(dummy).toBe(undefined)
-    array[key] = true
-    expect(array[key]).toBe(true)
-    expect(dummy).toBe(undefined)
-  })
+  it("well-known symbol 不应被观察", () => {
+    const key = Symbol.isConcatSpreadable;
+    let dummy;
+    const array = reactive([]);
+    observer(() => (dummy = array[key]));
+
+    expect(array[key]).toBe(undefined);
+    expect(dummy).toBe(undefined);
+    array[key] = true;
+    expect(array[key]).toBe(true);
+    expect(dummy).toBe(undefined);
+  });
+  // should observe function valued properties
+  it("function 的变更应触发副作用", () => {
+    const oldFunc = () => {};
+    const newFunc = () => {};
+
+    let dummy;
+    const obj = reactive({ func: oldFunc });
+    observer(() => (dummy = obj.func));
+
+    expect(dummy).toBe(oldFunc);
+    obj.func = newFunc;
+    expect(dummy).toBe(newFunc);
+  });
+  // should observe chained getters relying on this
+  it("链式调用的get也应被观察", () => {
+    const obj = reactive({
+      a: 1,
+      get b() {
+        return this.a;
+      },
+    });
+
+    let dummy;
+    observer(() => (dummy = obj.b));
+    expect(dummy).toBe(1);
+    obj.a++;
+    expect(dummy).toBe(2);
+  });
+  // should observe methods relying on this
+  it("依赖的方法也应触发副作用", () => {
+    const obj = reactive({
+      a: 1,
+      b() {
+        return this.a;
+      },
+    });
+
+    let dummy;
+    observer(() => (dummy = obj.b()));
+    expect(dummy).toBe(1);
+    obj.a++;
+    expect(dummy).toBe(2);
+  });
+  // should not observe set operations without a value change
+  it("不应在没有值变化的情况下观察设置操作", () => {
+    let hasDummy, getDummy;
+    const obj = reactive({ prop: "value" });
+
+    const getSpy = jest.fn(() => (getDummy = obj.prop));
+    const hasSpy = jest.fn(() => (hasDummy = "prop" in obj));
+    observer(getSpy);
+    observer(hasSpy);
+
+    expect(getDummy).toBe("value");
+    expect(hasDummy).toBe(true);
+    obj.prop = "value";
+    expect(getSpy).toHaveBeenCalledTimes(1);
+    expect(hasSpy).toHaveBeenCalledTimes(1);
+    expect(getDummy).toBe("value");
+    expect(hasDummy).toBe(true);
+  });
 });
