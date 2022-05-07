@@ -10,8 +10,11 @@ let shouldTrack = true;
 const effectStack = [];
 
 const observer = function (effect) {
-  const xxx = new ReactiveEffect(effect);
-  xxx.run();
+  const _effect = new ReactiveEffect(effect);
+  _effect.run();
+  // 这里是为了返回原函数
+  const runner = _effect.run.bind(_effect)
+  return runner
 };
 
 class ReactiveEffect {
@@ -47,6 +50,7 @@ function track(target, property, type) {
 function trackEffects(dep, target) {
   let shouldTrack = true;
   // 这里考虑的情况是一次副作用函数运行中多次触发GET劫持，触发track 获取dep 但是不再重复收集
+  // 避免了隐式自增的情况重复收集
   shouldTrack = !dep.has(currentEffect);
   // 依赖收集
   if (shouldTrack) {

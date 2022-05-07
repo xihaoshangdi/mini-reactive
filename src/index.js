@@ -1,17 +1,16 @@
-import { reactive, ref } from "./lib/reactive.js";
+import { reactive, ref, toRaw } from "./lib/reactive.js";
 import { observer } from "./lib/reactiveEffect.js";
 
-
-
-
-const key = Symbol.isConcatSpreadable
 let dummy
-const array= reactive([])
-observer(() => (dummy = array[key]))
+const obj = reactive({ prop: 'value', run: true })
 
-// expect(array[key]).toBe(undefined)
-// expect(dummy).toBe(undefined)
+const conditionalSpy = () => {
+    dummy = obj.run ? obj.prop : 'other'
+  }
+observer(conditionalSpy)
+
+
+obj.run = false
 debugger
-array[key] = true
-// expect(array[key]).toBe(true)
-// expect(dummy).toBe(undefined)
+obj.prop = 'value2'
+
