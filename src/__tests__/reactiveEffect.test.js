@@ -1,4 +1,4 @@
-import { observer } from "../lib/reactiveEffect.js";
+import { observer,stop } from "../lib/reactiveEffect.js";
 import { reactive, ref,toRaw } from "../lib/reactive.js";
 
 describe("副作用相关的测试用例", () => {
@@ -519,5 +519,93 @@ describe("副作用相关的测试用例", () => {
     model.inc()
     expect(dummy).toBe(1)
   })
+  // lazy
+  it('lazy', () => {
+    const obj = reactive({ foo: 1 })
+    let dummy
+    const runner = observer(() => (dummy = obj.foo), { lazy: true })
+    expect(dummy).toBe(undefined)
   
+    expect(runner()).toBe(1)
+    expect(dummy).toBe(1)
+    obj.foo = 2
+    expect(dummy).toBe(2)
+  })
+  // scheduler
+  it('scheduler', () => {
+    let dummy
+    let run
+    const scheduler = jest.fn(() => {
+      run = runner
+    })
+    const obj = reactive({ foo: 1 })
+    const runner = observer(
+      () => {
+        dummy = obj.foo
+      },
+      { scheduler }
+    )
+    expect(scheduler).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+    // should be called on first trigger
+    obj.foo++
+    expect(scheduler).toHaveBeenCalledTimes(1)
+    // should not run yet
+    expect(dummy).toBe(1)
+    // manually run
+    run()
+    // should have run
+    expect(dummy).toBe(2)
+  })
+  // stop
+  // it('stop', () => {
+  //   let dummy
+  //   const obj = reactive({ prop: 1 })
+  //   const runner = observer(() => {
+  //     dummy = obj.prop
+  //   })
+  //   obj.prop = 2
+  //   expect(dummy).toBe(2)
+  //   stop(runner)
+  //   obj.prop = 3
+  //   expect(dummy).toBe(2)
+
+  //   // stopped effect should still be manually callable
+  //   runner()
+  //   expect(dummy).toBe(3)
+  // })
+  // should not be triggered when the value and the old value both are NaN
+  it('NaN 应当触发', () => {
+    const obj = reactive({
+      foo: NaN
+    })
+    const fnSpy = jest.fn(() => obj.foo)
+    observer(fnSpy)
+    obj.foo = NaN
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+  })
+  // should trigger all effects when array length is set to 0
+  it('数组长度为0 触发所有的副作用', () => {
+    const observed = reactive([1])
+    let dummy, record
+    observer(() => {
+      dummy = observed.length
+    })
+    observer(() => {
+      record = observed[0]
+    })
+    expect(dummy).toBe(1)
+    expect(record).toBe(1)
+
+    observed[1] = 2
+    expect(observed[1]).toBe(2)
+
+    observed.unshift(3)
+    expect(dummy).toBe(3)
+    expect(record).toBe(3)
+
+    observed.length = 0
+    expect(dummy).toBe(0)
+    expect(record).toBeUndefined()
+  })
 });

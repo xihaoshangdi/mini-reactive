@@ -1,14 +1,14 @@
 import { reactive, ref, toRaw } from "./lib/reactive.js";
-import { observer } from "./lib/reactiveEffect.js";
+import { observer, stop } from "./lib/reactiveEffect.js";
 
-let dummy = 0;
-const numbers = reactive({ num1: 3 });
+let dummy;
+const obj = reactive({});
 observer(() => {
-  dummy = 0;
-  for (let key in numbers) {
-    dummy += numbers[key]; 
+  for (const key in obj) {
+    dummy = obj[key];
   }
+  dummy = obj.prop;
 });
-debugger
-numbers.num2 = 4;
- 
+
+obj.prop = 16;
+

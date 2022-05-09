@@ -14,3 +14,5 @@ export const isIntegerKey = (key) =>
 export const hasOwn = (val, key) => hasOwnProperty.call(val, key);
 
 export const hasChanged = (value, oldValue) => !Object.is(value, oldValue);
+
+export const extend = Object.assign

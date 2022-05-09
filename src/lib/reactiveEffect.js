@@ -1,6 +1,6 @@
 import { getDep, getDepMap } from "./dep.js";
 import { ITERATE_KEY } from "./baseHandler";
-import { isObject, isArray, hasOwn, hasChanged, isIntegerKey } from "./util.js";
+import { extend, isArray, hasOwn, hasChanged, isIntegerKey } from "./util.js";
 
 //
 let currentEffect = null;
@@ -9,16 +9,28 @@ let shouldTrack = true;
 //
 const effectStack = [];
 
-const observer = function (effect) {
+const observer = function (effect, options) {
   const _effect = new ReactiveEffect(effect);
-  _effect.run();
+  // 合并可选项
+  extend(_effect, options);
+  // lazy的情况不立即调度
+  if (!options || !options.lazy) {
+    _effect.run();
+  }
   // 这里是为了返回原函数
   const runner = _effect.run.bind(_effect);
+  // 这里挂载原函数主要是为了后面Stop的时候用于停止
+  runner._effect = _effect;
   return runner;
+};
+
+const stop = function (runner) {
+  runner._effect.stop();
 };
 
 class ReactiveEffect {
   constructor(effect) {
+    this.deferStop = false;
     this.effect = effect;
     this.deps = [];
   }
@@ -31,13 +43,16 @@ class ReactiveEffect {
         // 收集前清空所有依赖：为了防止未激活的分支的依赖仍遗留在收集中
         cleanupEffects(currentEffect);
         // 执行方法收集依赖
-        currentEffect.effect();
-        return currentEffect.effect;
+        return currentEffect.effect();
       } finally {
         effectStack.pop();
         currentEffect = effectStack[effectStack.length - 1] || null;
       }
     }
+  }
+
+  stop() {
+    // todo
   }
 }
 
@@ -70,7 +85,14 @@ function trigger(target, property, type) {
   let deps = [];
   // 这里不用getDep的原因是 getDep会加入空Set
   const effectMap = getDepMap(target);
-
+  // 这里是为了处理数组直接修改length的情况,需要触发影响到的副作用
+  if (isArray(target)) {
+    effectMap.forEach((dep, key) => {
+      if (key === "length" || key >= target[property]) {
+        deps.push(dep);
+      }
+    });
+  }
   switch (type) {
     case "ADD":
       // ADD 触发的情况：
@@ -93,15 +115,23 @@ function trigger(target, property, type) {
     default:
       break;
   }
-  // 收集所有的副作用函数并过滤可能的 undefined 情况 
+  // 收集所有的副作用函数并过滤可能的 undefined 情况
   // deps [ undefined,Set(1),Set(2) ]
-  triggerEffects(deps.filter((dep) => dep));
+  const effects = [];
+  deps.filter((dep) => dep).forEach((dep) => effects.push(...dep));
+  triggerEffects(effects);
 }
 
-function triggerEffects(deps) {
-  // 这里会合并重复的副作用函数
-  const effects = new Set(...deps);
-  effects.forEach((item) => item.run());
+function triggerEffects(effects) {
+  // 这里会合并重复的副作用函数 仅留下需要执行的副作用
+  const effective = new Set(effects);
+  effective.forEach((effect) => {
+    if (effect.scheduler) {
+      effect.scheduler();
+    } else {
+      effect.run();
+    }
+  });
 }
 
 function cleanupEffects(effect) {
@@ -114,4 +144,4 @@ function cleanupEffects(effect) {
   }
 }
 
-export { observer, track, trigger, currentEffect };
+export { observer, stop, track, trigger, currentEffect };
