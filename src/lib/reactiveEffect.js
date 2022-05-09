@@ -13,8 +13,8 @@ const observer = function (effect) {
   const _effect = new ReactiveEffect(effect);
   _effect.run();
   // 这里是为了返回原函数
-  const runner = _effect.run.bind(_effect)
-  return runner
+  const runner = _effect.run.bind(_effect);
+  return runner;
 };
 
 class ReactiveEffect {
@@ -28,6 +28,9 @@ class ReactiveEffect {
       try {
         currentEffect = this;
         effectStack.push(currentEffect);
+        // 收集前清空所有依赖：为了防止未激活的分支的依赖仍遗留在收集中
+        cleanupEffects(currentEffect);
+        // 执行方法收集依赖
         currentEffect.effect();
         return currentEffect.effect;
       } finally {
@@ -65,6 +68,8 @@ function trackEffects(dep, target) {
 function trigger(target, property, type) {
   // console.log("trigger", target, property, type);
   let deps = [];
+  // 这里不用getDep的原因是 getDep会加入空Set
+  const effectMap = getDepMap(target);
 
   switch (type) {
     case "ADD":
@@ -72,23 +77,41 @@ function trigger(target, property, type) {
       // 1.对象新增的属性已经存在副作用(触发对应的副作用)
       // 2.数组的越界新增(触发length副作用 )
       // 3.对象的属性新增(触发ITERATE_KEY副作用 )
-      deps.push(...getDep(target, property));
+      deps.push(effectMap.get(property));
       if (isArray(target) && isIntegerKey(property)) {
-        deps.push(...getDep(target, "length"));
+        deps.push(effectMap.get("length"));
       } else {
-        deps.push(...getDep(target, ITERATE_KEY));
+        deps.push(effectMap.get(ITERATE_KEY));
       }
       break;
     case "SET":
-      deps.push(...getDep(target, property));
+      deps.push(effectMap.get(property));
       break;
     case "DEL":
-      deps.push(...getDep(target, property));
+      deps.push(effectMap.get(property));
       break;
     default:
       break;
   }
-  deps.forEach((item) => item.run());
+  // 收集所有的副作用函数并过滤可能的 undefined 情况 
+  // deps [ undefined,Set(1),Set(2) ]
+  triggerEffects(deps.filter((dep) => dep));
+}
+
+function triggerEffects(deps) {
+  // 这里会合并重复的副作用函数
+  const effects = new Set(...deps);
+  effects.forEach((item) => item.run());
+}
+
+function cleanupEffects(effect) {
+  const deps = effect.deps;
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect);
+    }
+    deps.length = 0;
+  }
 }
 
 export { observer, track, trigger, currentEffect };

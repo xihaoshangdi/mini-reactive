@@ -433,4 +433,91 @@ describe("副作用相关的测试用例", () => {
     expect(dummy).toBe('other')
     expect(conditionalSpy).toHaveBeenCalledTimes(2)
   })
+  // should not double wrap if the passed function is a effect
+  it('每次返回的是一个新函数，原始对象是同一个', () => {
+    const runner = observer(() => {})
+    const otherRunner = observer(runner)
+    expect(runner).not.toBe(otherRunner)
+    expect(runner.raw).toBe(otherRunner.raw)
+  })
+  // should not run multiple times for a single mutation
+  it('单一的改变只会执行一次', () => {
+    let dummy
+    const obj = reactive({})
+    const fnSpy = jest.fn(() => {
+      for (const key in obj) {
+        dummy = obj[key]
+      }
+      dummy = obj.prop
+    })
+    observer(fnSpy)
+  
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    obj.prop = 16
+    expect(dummy).toBe(16)
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+  })
+  // should allow nested effects
+  it('observer 可以嵌套', () => {
+    const nums = reactive({ num1: 0, num2: 1, num3: 2 })
+    const dummy= {}
+  
+    const childSpy = jest.fn(() => (dummy.num1 = nums.num1))
+    const childeffect = observer(childSpy)
+    const parentSpy = jest.fn(() => {
+      dummy.num2 = nums.num2
+      childeffect()
+      dummy.num3 = nums.num3
+    })
+    observer(parentSpy)
+  
+    expect(dummy).toEqual({ num1: 0, num2: 1, num3: 2 })
+    expect(parentSpy).toHaveBeenCalledTimes(1)
+    expect(childSpy).toHaveBeenCalledTimes(2)
+    // this should only call the childeffect
+    nums.num1 = 4
+    expect(dummy).toEqual({ num1: 4, num2: 1, num3: 2 })
+    expect(parentSpy).toHaveBeenCalledTimes(1)
+    expect(childSpy).toHaveBeenCalledTimes(3)
+    // this calls the parenteffect, which calls the childeffect once
+    nums.num2 = 10
+    expect(dummy).toEqual({ num1: 4, num2: 10, num3: 2 })
+    expect(parentSpy).toHaveBeenCalledTimes(2)
+    expect(childSpy).toHaveBeenCalledTimes(4)
+    // this calls the parenteffect, which calls the childeffect once
+    nums.num3 = 7
+    expect(dummy).toEqual({ num1: 4, num2: 10, num3: 7 })
+    expect(parentSpy).toHaveBeenCalledTimes(3)
+    expect(childSpy).toHaveBeenCalledTimes(5)
+  })
+  // should observe json methods
+  it('JSON 方法可以响应', () => {
+    let dummy = {}
+    const obj = reactive({})
+    observer(() => {
+      dummy = JSON.parse(JSON.stringify(obj))
+    })
+    obj.a = 1
+    expect(dummy.a).toBe(1)
+  })
+  // should observe class method invocations
+  it('Class 方法调用可以观察 ', () => {
+    class Model {
+      constructor() {
+        this.count = 0
+      }
+      inc() {
+        this.count++
+      }
+    }
+    const model = reactive(new Model())
+    let dummy
+    observer(() => {
+      dummy = model.count
+    })
+    expect(dummy).toBe(0)
+    model.inc()
+    expect(dummy).toBe(1)
+  })
+  
 });
