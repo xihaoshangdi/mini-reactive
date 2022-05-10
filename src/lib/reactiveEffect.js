@@ -19,7 +19,7 @@ const observer = function (effect, options) {
   }
   // 这里是为了返回原函数
   const runner = _effect.run.bind(_effect);
-  // 这里挂载原函数主要是为了后面Stop的时候用于停止
+  // 这里挂载 _effect 主要是为了后面Stop的时候用于停止
   runner._effect = _effect;
   return runner;
 };
@@ -30,11 +30,16 @@ const stop = function (runner) {
 
 class ReactiveEffect {
   constructor(effect) {
+    this.active = true;
     this.deferStop = false;
     this.effect = effect;
     this.deps = [];
   }
   run() {
+    // 被Stop停止的副作用直接返回原函数
+    if (!this.active) {
+      return this.effect();
+    }
     // 这里调用栈的判断是为了防止依赖循环
     if (!effectStack.includes(this)) {
       try {
@@ -47,12 +52,23 @@ class ReactiveEffect {
       } finally {
         effectStack.pop();
         currentEffect = effectStack[effectStack.length - 1] || null;
+        if (this.deferStop) {
+          this.stop();
+        }
       }
     }
   }
 
   stop() {
-    // todo
+    // 当前在执行的副作用要Stop 自身，需要延后进行Stop 
+    if (activeEffect === this) {
+      this.deferStop = true;
+    } else {
+      // 清除当前副作用所有的收集
+      cleanupEffects(this);
+      // 关闭副作用的激活状态
+      this.active = false;
+    }
   }
 }
 
@@ -126,10 +142,13 @@ function triggerEffects(effects) {
   // 这里会合并重复的副作用函数 仅留下需要执行的副作用
   const effective = new Set(effects);
   effective.forEach((effect) => {
-    if (effect.scheduler) {
-      effect.scheduler();
-    } else {
-      effect.run();
+    // 这里比较是为了消除 自循环的情况
+    if (currentEffect !== effect) {
+      if (effect.scheduler) {
+        effect.scheduler();
+      } else {
+        effect.run();
+      }
     }
   });
 }
