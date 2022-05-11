@@ -33,12 +33,18 @@ const baseHandler = {
     if (isSymbol(property) && builtInSymbols.has(property)) {
       return result;
     }
+    // 处理 数组方法导致的可能自循环
+    // const targetIsArray = isArray(target)
+    // if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
+    //   return Reflect.get(arrayInstrumentations, key, receiver)
+    // }
     // 依赖收集
     track(target, property);
     // 代理嵌套子节点
     if (isObject(result)) {
       return reactive(result);
     }
+    console.log('-------------------------------');
     return result;
   },
   has: function (target, property) {
@@ -56,6 +62,7 @@ const baseHandler = {
     return result;
   },
   set: function (target, property, value, receiver) {
+    debugger
     const oldValue = target[property];
     // hasProp 判断是新增属性还是已有属性
     const hasProp =

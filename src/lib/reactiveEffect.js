@@ -60,7 +60,7 @@ class ReactiveEffect {
   }
 
   stop() {
-    // 当前在执行的副作用要Stop 自身，需要延后进行Stop 
+    // 当前在执行的副作用要Stop 自身，需要延后进行Stop
     if (activeEffect === this) {
       this.deferStop = true;
     } else {
@@ -163,4 +163,7 @@ function cleanupEffects(effect) {
   }
 }
 
-export { observer, stop, track, trigger, currentEffect };
+// Test use
+const effect = observer;
+
+export { effect, observer, stop, track, trigger, currentEffect };

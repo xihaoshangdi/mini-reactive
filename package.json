@@ -5,7 +5,7 @@
   "author": "xihaoshangdi <xihaoshangdi@163.com>",
   "license": "MIT",
   "scripts": {
-    "test": "jest reactiveEffect.test"
+    "test": "jest effect.spec",
   },
   "devDependencies": {
     "@babel/core": "^7.17.10",
