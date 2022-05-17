@@ -5,7 +5,8 @@
   "author": "xihaoshangdi <xihaoshangdi@163.com>",
   "license": "MIT",
   "scripts": {
-    "test": "jest effect.spec"
+    "test": "jest effect.spec",
+    "dev":"parcel src/index.html"
   },
   "devDependencies": {
     "@babel/core": "^7.17.10",
@@ -19,6 +20,7 @@
     "events": "^3.3.0",
     "jest": "^28.0.3",
     "os-browserify": "^0.3.0",
+    "parcel": "^2.5.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "querystring-es3": "^0.2.1",
