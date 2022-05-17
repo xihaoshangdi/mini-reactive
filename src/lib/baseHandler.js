@@ -44,7 +44,6 @@ const baseHandler = {
     if (isObject(result)) {
       return reactive(result);
     }
-    console.log('-------------------------------');
     return result;
   },
   has: function (target, property) {
