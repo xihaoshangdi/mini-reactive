@@ -1,5 +1,5 @@
-import { track, trigger } from "./reactiveEffect.js";
-import { reactive, ref, ReactiveEnum, rawToProxyMap,toRaw } from "./reactive.js";
+import { track, trigger, resetTracking, pauseTracking } from "./reactiveEffect.js";
+import { reactive, ref, ReactiveEnum, rawToProxyMap, toRaw } from "./reactive.js";
 import {
   isObject,
   isArray,
@@ -8,7 +8,6 @@ import {
   isIntegerKey,
   isSymbol,
 } from "./util.js";
-
 export const ITERATE_KEY = Symbol("iterate");
 export const HAS_KEY = Symbol("has");
 // well-known symbol 不应被观察的数据
@@ -17,11 +16,27 @@ const builtInSymbols = new Set(
     .map((key) => Symbol[key])
     .filter(isSymbol)
 );
+// 数组方法相关
+const arrayInstrumentations = createArrayInstrumentations()
+// 这个arrayInstrumentations是为了处理 数组方法收集导致的可能的自循环 
+// 解决思路：重写数组方法，数组原生方法调用前，暂停依赖收集，原生方法调用后，开启依赖收集
+// 原生方法陷阱Setter导致副作用除触发时，需要开启依赖收集，副作用执行完成后，重新恢复收集状态
+function createArrayInstrumentations() {
+  const instrumentations = {}
+  ;(['push', 'pop', 'shift', 'unshift', 'splice']).forEach(property => {
+    instrumentations[property] = function () {
+      pauseTracking()
+      const result = toRaw(this)[property].apply(this, arguments)
+      resetTracking()
+      return result
+    }
+  })
+  return instrumentations
+}
 
 const baseHandler = {
   get: function (target, property, receiver) {
-    const result = Reflect.get(target, property, receiver);
-    // console.log("get trigger", target, property);
+    console.log("get trigger", target, property);
     // 处理toRaw 获取原始对象
     if (
       property === ReactiveEnum.RAW &&
@@ -29,15 +44,17 @@ const baseHandler = {
     ) {
       return target;
     }
+    // 处理数组相关
+    const targetIsArray = isArray(target)
+    if (targetIsArray && hasOwn(arrayInstrumentations, property)) {
+      return Reflect.get(arrayInstrumentations, property, receiver)
+    }
+    // 执行静态get方法
+    const result = Reflect.get(target, property, receiver);
     // 处理 well-known symbol
     if (isSymbol(property) && builtInSymbols.has(property)) {
       return result;
     }
-    // 处理 数组方法导致的可能自循环
-    // const targetIsArray = isArray(target)
-    // if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-    //   return Reflect.get(arrayInstrumentations, key, receiver)
-    // }
     // 依赖收集
     track(target, property);
     // 代理嵌套子节点
@@ -61,7 +78,6 @@ const baseHandler = {
     return result;
   },
   set: function (target, property, value, receiver) {
-    debugger
     const oldValue = target[property];
     // hasProp 判断是新增属性还是已有属性
     const hasProp =
@@ -69,7 +85,7 @@ const baseHandler = {
         ? Number(property) < target.length
         : hasOwn(target, property);
     const result = Reflect.set(target, property, value, receiver);
-    //console.log("set trigger", target, property, oldValue, value, receiver);
+    console.log("set trigger", target, property, oldValue, value, receiver);
     // 这里的比较是为了只触发目标对象身上的属性变动相关的副作用,目标对象原型链上的属性变动不触发
     if (target === toRaw(receiver)) {
       // 数组相关(依赖触发):

@@ -2,10 +2,11 @@ import { getDep, getDepMap } from "./dep.js";
 import { ITERATE_KEY } from "./baseHandler";
 import { extend, isArray, hasOwn, hasChanged, isIntegerKey } from "./util.js";
 
+let shouldTrack = true
 //
 let currentEffect = null;
 //
-let shouldTrack = true;
+
 //
 const effectStack = [];
 
@@ -40,9 +41,12 @@ class ReactiveEffect {
     if (!this.active) {
       return this.effect();
     }
+    // 这里记录副作用的收集状态，主要是为了让被Setter触发的依赖能正常被收集且不影响整个流程
+    const lastShouldTrack = shouldTrack
     // 这里调用栈的判断是为了防止依赖循环
     if (!effectStack.includes(this)) {
       try {
+        shouldTrack = true
         currentEffect = this;
         effectStack.push(currentEffect);
         // 收集前清空所有依赖：为了防止未激活的分支的依赖仍遗留在收集中
@@ -52,6 +56,7 @@ class ReactiveEffect {
       } finally {
         effectStack.pop();
         currentEffect = effectStack[effectStack.length - 1] || null;
+        shouldTrack = lastShouldTrack
         if (this.deferStop) {
           this.stop();
         }
@@ -73,10 +78,9 @@ class ReactiveEffect {
 }
 
 function track(target, property, type) {
-  if (currentEffect) {
+  if (shouldTrack && currentEffect) {
     const dep = getDep(target, property);
     // 收集副作用
-    // console.log(target);
     trackEffects(dep, target, type);
   }
 }
@@ -88,12 +92,12 @@ function trackEffects(dep, target) {
   shouldTrack = !dep.has(currentEffect);
   // 依赖收集
   if (shouldTrack) {
-    // console.log(target, currentEffect);
     // 收集依赖
     dep.add(currentEffect);
     //
     currentEffect.deps.push(dep);
   }
+  console.log('depsMap', getDepMap(target));
 }
 
 function trigger(target, property, type) {
@@ -144,6 +148,7 @@ function triggerEffects(effects) {
   effective.forEach((effect) => {
     // 这里比较是为了消除 自循环的情况
     if (currentEffect !== effect) {
+      console.log('需要执行的依赖', effect);
       if (effect.scheduler) {
         effect.scheduler();
       } else {
@@ -166,4 +171,12 @@ function cleanupEffects(effect) {
 // Test use
 const effect = observer;
 
-export { effect, observer, stop, track, trigger, currentEffect };
+function pauseTracking() {
+  shouldTrack = false
+}
+
+function resetTracking() {
+  shouldTrack = true
+}
+
+export { effect, observer, stop, track, trigger, currentEffect,pauseTracking,resetTracking };
