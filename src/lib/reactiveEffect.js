@@ -21,12 +21,12 @@ const observer = function (effect, options) {
   // 这里是为了返回原函数
   const runner = _effect.run.bind(_effect);
   // 这里挂载 _effect 主要是为了后面Stop的时候用于停止
-  runner._effect = _effect;
+  runner.effect = _effect;
   return runner;
 };
 
 const stop = function (runner) {
-  runner._effect.stop();
+  runner.effect.stop();
 };
 
 class ReactiveEffect {
@@ -66,7 +66,7 @@ class ReactiveEffect {
 
   stop() {
     // 当前在执行的副作用要Stop 自身，需要延后进行Stop
-    if (activeEffect === this) {
+    if (currentEffect === this) {
       this.deferStop = true;
     } else {
       // 清除当前副作用所有的收集
@@ -97,7 +97,7 @@ function trackEffects(dep, target) {
     //
     currentEffect.deps.push(dep);
   }
-  console.log('depsMap', getDepMap(target));
+  // console.log('depsMap', getDepMap(target));
 }
 
 function trigger(target, property, type) {
@@ -148,7 +148,7 @@ function triggerEffects(effects) {
   effective.forEach((effect) => {
     // 这里比较是为了消除 自循环的情况
     if (currentEffect !== effect) {
-      console.log('需要执行的依赖', effect);
+      // console.log('需要执行的依赖', effect);
       if (effect.scheduler) {
         effect.scheduler();
       } else {

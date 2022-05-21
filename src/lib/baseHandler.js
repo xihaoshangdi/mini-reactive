@@ -36,7 +36,7 @@ function createArrayInstrumentations() {
 
 const baseHandler = {
   get: function (target, property, receiver) {
-    console.log("get trigger", target, property);
+    // console.log("get trigger", target, property);
     // 处理toRaw 获取原始对象
     if (
       property === ReactiveEnum.RAW &&
@@ -85,7 +85,7 @@ const baseHandler = {
         ? Number(property) < target.length
         : hasOwn(target, property);
     const result = Reflect.set(target, property, value, receiver);
-    console.log("set trigger", target, property, oldValue, value, receiver);
+    // console.log("set trigger", target, property, oldValue, value, receiver);
     // 这里的比较是为了只触发目标对象身上的属性变动相关的副作用,目标对象原型链上的属性变动不触发
     if (target === toRaw(receiver)) {
       // 数组相关(依赖触发):
